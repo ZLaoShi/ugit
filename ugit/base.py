@@ -7,8 +7,7 @@ def write_tree(directory='.'):
     with os.scandir(directory) as it:
         for entry in it:
             full = f'{directory}/{entry.name}'
-            # 增强检查：同时检查 .git 和 .ugit
-            if is_ignored(full) or '.git' in full.split('/'):
+            if is_ignored(full):
                 continue
 
             if entry.is_file(follow_symlinks=False):
@@ -47,15 +46,40 @@ def get_tree(oid, base_path=''):
             assert False, f'Unknown tree entry {type_}'
     return result
 
+def _empty_current_directory():
+    for root, dirnames, filenames in os.walk('.', topdown=False):
+        for filename in filenames:
+            path = os.path.relpath(f'{root}/{filename}')
+            if is_ignored(path):
+                continue
+            os.remove(path)
+        for dirname in dirnames:
+            path = os.path.relpath(f'{root}/{dirname}')
+            if is_ignored(path):
+                continue
+            try:
+                os.rmdir(path)
+            except(FileNotFoundError, OSError):
+                # 删除操作可能会失败，如果目录中包含被忽略的文件，
+                # 所以这是可以接受的。
+                pass
+
 def read_tree(tree_oid):
+    _empty_current_directory()
     for path, oid in get_tree(tree_oid, base_path='./').items():
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'wb') as f:
             f.write(data.get_object(oid))
 
-# linux 下的隐藏文件
+# 通用的忽略函数
+# 增强检查：同时检查 .git 和 .ugit
 def is_ignored(path):
-    return '.ugit' in path.split('/')
+    normalized_path = path.replace('\\', '/')
+    return '.ugit' in normalized_path.split('/') or '.git' in normalized_path.split('/')
+
+# # linux 下的隐藏文件
+# def is_ignored(path):
+#     return '.ugit' in path.split('/')
 
 # win 下的隐藏文件
 # def is_ignored(path):

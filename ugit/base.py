@@ -1,4 +1,8 @@
 import os
+import itertools
+import operator
+
+from collections import namedtuple
 
 from . import data
 
@@ -70,6 +74,42 @@ def read_tree(tree_oid):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'wb') as f:
             f.write(data.get_object(oid))
+
+def commit(message):
+    commit = f'tree {write_tree()}\n'
+
+    HEAD = data.get_HEAD()
+    if HEAD:
+        commit += f'parent {HEAD}\n'
+        
+    commit += '\n'
+    commit += f'{message}\n'
+    
+    oid = data.hash_object(commit.encode(), 'commit')
+
+    data.set_HEAD(oid)
+
+    return oid
+
+Commit = namedtuple('Commit', ['tree', 'parent', 'message'])
+
+def get_commit(oid):
+    parent = None
+
+    commit = data.get_object(oid, 'commit').decode()
+    lines = iter(commit.splitlines())
+    for line in itertools.takewhile(operator.truth, lines):
+        key, value = line.split(' ', 1)
+        if key == 'tree':
+            tree = value 
+        elif key == 'parent':
+            parent = value
+        else:
+            assert False, f'Unknown field {key}'
+    
+    message = '\n'.join(lines)
+    return Commit(tree=tree, parent=parent, message=message)
+
 
 # 通用的忽略函数
 # 增强检查：同时检查 .git 和 .ugit

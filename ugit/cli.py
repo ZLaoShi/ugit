@@ -100,15 +100,12 @@ def commit(args):
 
 # log: 显示提交历史
 def log(args):
-    oid = args.oid
-    while oid:
+    for oid in base.iter_commits_and_parents({args.oid}):
         commit = base.get_commit(oid)
 
         print(f'commit {oid}')
         print(textwrap.indent(commit.message, '    '))
         print('')
-
-        oid = commit.parent
 
 # checkout: 切换到提交 
 def checkout(args):
@@ -142,16 +139,23 @@ def k(args):
         
     dot += '}'
     
-    # 3. 保存到临时文件，使用 utf-8 编码
-    temp_file = 'graph.dot'
-    with open(temp_file, 'w', encoding='utf-8') as f:
-        f.write(dot)
-    
-    try:
-        # 使用 -Gcharset=utf-8 参数
-        subprocess.run(['dot', '-Gcharset=utf-8', '-Tpng', temp_file, '-o', 'graph.png'])
-        subprocess.run(['start', 'graph.png'], shell=True)
-    except FileNotFoundError:
-        print('Graphviz not found. DOT 格式输出如下:')
-        print('\n' + dot)
-        print('\n请将以上内容复制到 https://dreampuf.github.io/GraphvizOnline/')
+    if os.name == 'posix':  # Linux/Unix
+        try:
+            with subprocess.Popen(
+                ['dot', '-Tgtk'],
+                stdin=subprocess.PIPE) as proc:
+                proc.communicate(dot.encode('utf-8'))
+        except FileNotFoundError:
+            print('Graphviz not found.')
+    else:  # Windows
+        temp_file = 'graph.dot'
+        with open(temp_file, 'w', encoding='utf-8') as f:
+            f.write(dot)
+        
+        try:
+            subprocess.run(['dot', '-Gcharset=utf-8', '-Tpng', temp_file, '-o', 'graph.png'])
+            subprocess.run(['start', 'graph.png'], shell=True)
+        except FileNotFoundError:
+            print('Graphviz not found. DOT 格式输出如下:')
+            print('\n' + dot)
+            print('\n请将以上内容复制到 https://dreampuf.github.io/GraphvizOnline/')

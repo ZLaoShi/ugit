@@ -3,7 +3,7 @@ import itertools
 import operator
 import string
 
-from collections import namedtuple
+from collections import deque, namedtuple
 
 from . import data
 
@@ -121,18 +121,19 @@ def get_commit(oid):
     return Commit(tree=tree, parent=parent, message=message)
 
 def iter_commits_and_parents(oids):
-    oids = set(oids)
+    oids = deque(oids)
     visited = set()
 
     while oids:
-        oid = oids.pop()
+        oid = oids.popleft() # 从左侧弹出，保持顺序
         if not oid or oid in visited:
             continue
         visited.add(oid)
         yield oid
 
         commit = get_commit(oid)
-        oids.add(commit.parent)
+        # 从左侧添加父提交
+        oids.appendleft(commit.parent)
 
 def get_oid(name):
     if name == '@':name = 'HEAD' 

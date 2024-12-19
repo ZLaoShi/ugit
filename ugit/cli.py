@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import textwrap
+import subprocess
 
 from . import data
 from . import base
@@ -17,6 +18,9 @@ def parse_args():
     commands = parser.add_subparsers(dest='command')
     commands.required = True
 
+    # 获取转换函数引用
+    oid = base.get_oid
+
     # init 子命令
     init_parser = commands.add_parser('init')
     init_parser.set_defaults(func=init)  # 绑定 func
@@ -29,7 +33,7 @@ def parse_args():
     # cat-file 子命令
     cat_file_parser = commands.add_parser('cat-file')
     cat_file_parser.set_defaults(func=cat_file)
-    cat_file_parser.add_argument('object')
+    cat_file_parser.add_argument('object', type=oid) # 使用转换函数作为参数类型
 
     # write-tree 子命令
     write_tree_parser = commands.add_parser('write-tree')
@@ -38,7 +42,7 @@ def parse_args():
     # read-tree 子命令
     read_tree_parser = commands.add_parser('read-tree')
     read_tree_parser.set_defaults(func=read_tree)
-    read_tree_parser.add_argument('tree')
+    read_tree_parser.add_argument('tree', type=oid)
     
     # commit 子命令
     commit_parser = commands.add_parser('commit')
@@ -48,12 +52,22 @@ def parse_args():
     # log 子命令
     log_parser = commands.add_parser('log')
     log_parser.set_defaults(func=log)
-    log_parser.add_argument('oid', nargs='?')
+    log_parser.add_argument('oid',default='@', type=oid, nargs='?')
 
     #checkout 子命令
     checkout_parser = commands.add_parser('checkout')
     checkout_parser.set_defaults(func=checkout)
-    checkout_parser.add_argument('oid')
+    checkout_parser.add_argument('oid', type=oid)
+
+    # tag 子命令
+    tag_parser = commands.add_parser('tag')
+    tag_parser.set_defaults(func=tag)
+    tag_parser.add_argument('name')
+    tag_parser.add_argument('oid' ,default='@', type=oid, nargs='?')
+
+    # k 子命令
+    k_parser = commands.add_parser('k')
+    k_parser.set_defaults(func=k)
 
     return parser.parse_args()
 
@@ -86,7 +100,7 @@ def commit(args):
 
 # log: 显示提交历史
 def log(args):
-    oid = args.oid or data.get_HEAD()
+    oid = args.oid
     while oid:
         commit = base.get_commit(oid)
 
@@ -99,3 +113,45 @@ def log(args):
 # checkout: 切换到提交 
 def checkout(args):
     base.checkout(args.oid)
+
+# tag: 创建标签
+def tag(args):
+    base.create_tag(args.name, args.oid)
+
+# k: 可视化记录
+def k(args):
+    # 添加中文字体支持
+    dot = '''digraph commits {
+    graph [fontname="Microsoft YaHei"];
+    node [fontname="Microsoft YaHei"];
+    edge [fontname="Microsoft YaHei"];
+'''
+    # 1. 收集所有引用的OID
+    oids = set()
+    for refname, ref in data.iter_refs():
+        dot += f'"{refname}" [shape=note]\n'
+        dot += f'"{refname}" -> "{ref}"\n'
+        oids.add(ref)
+
+    # 2. 遍历所有提交及其父提交
+    for oid in base.iter_commits_and_parents(oids):
+        commit = base.get_commit(oid)
+        dot += f'"{oid}" [shape=box style=filled label="{oid[:10]}\n{commit.message}"]\n'
+        if commit.parent:
+            dot += f'"{oid}" -> "{commit.parent}"\n'
+        
+    dot += '}'
+    
+    # 3. 保存到临时文件，使用 utf-8 编码
+    temp_file = 'graph.dot'
+    with open(temp_file, 'w', encoding='utf-8') as f:
+        f.write(dot)
+    
+    try:
+        # 使用 -Gcharset=utf-8 参数
+        subprocess.run(['dot', '-Gcharset=utf-8', '-Tpng', temp_file, '-o', 'graph.png'])
+        subprocess.run(['start', 'graph.png'], shell=True)
+    except FileNotFoundError:
+        print('Graphviz not found. DOT 格式输出如下:')
+        print('\n' + dot)
+        print('\n请将以上内容复制到 https://dreampuf.github.io/GraphvizOnline/')

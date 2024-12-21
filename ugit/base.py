@@ -29,6 +29,7 @@ def write_tree(directory='.'):
                    in sorted(entries))
     return data.hash_object(tree.encode(), 'tree')
   
+
 def _iter_tree_enrties(oid):
     if not oid:
         return
@@ -36,6 +37,7 @@ def _iter_tree_enrties(oid):
     for entry in tree.decode().splitlines():
         type_, oid, name = entry.split(' ', 2)
         yield type_, oid, name
+
 
 def get_tree(oid, base_path=''):
     result = {}
@@ -50,6 +52,7 @@ def get_tree(oid, base_path=''):
         else:
             assert False, f'Unknown tree entry {type_}'
     return result
+
 
 def _empty_current_directory():
     for root, dirnames, filenames in os.walk('.', topdown=False):
@@ -76,10 +79,11 @@ def read_tree(tree_oid):
         with open(path, 'wb') as f:
             f.write(data.get_object(oid))
 
+
 def commit(message):
     commit = f'tree {write_tree()}\n'
 
-    HEAD = data.get_ref('HEAD')
+    HEAD = data.get_ref('HEAD').value
     if HEAD:
         commit += f'parent {HEAD}\n'
         
@@ -88,20 +92,26 @@ def commit(message):
     
     oid = data.hash_object(commit.encode(), 'commit')
 
-    data.update_ref('HEAD',oid)
+    data.update_ref('HEAD',data.RefValue(symbolic=False, value=oid))
 
     return oid
+
 
 def checkout (oid):
     commit = get_commit(oid)
     read_tree (commit.tree)
-    data.update_ref('HEAD', oid)
+    data.update_ref('HEAD', data.RefValue(symbolic=False, value=oid))
 
 def create_tag(name, oid):
-    data.update_ref(f'refs/tags/{name}', oid)
+    data.update_ref(f'refs/tags/{name}', data.RefValue(symbolic=False, value=oid))
+
+def create_branch(name, oid):
+    data.update_ref(f'refs/heads/{name}', data.RefValue(symbolic=False, value=oid))
 
 
 Commit = namedtuple('Commit', ['tree', 'parent', 'message'])
+
+
 
 def get_commit(oid):
     parent = None
@@ -120,6 +130,8 @@ def get_commit(oid):
     message = '\n'.join(lines)
     return Commit(tree=tree, parent=parent, message=message)
 
+
+
 def iter_commits_and_parents(oids):
     oids = deque(oids)
     visited = set()
@@ -135,6 +147,8 @@ def iter_commits_and_parents(oids):
         # 从左侧添加父提交
         oids.appendleft(commit.parent)
 
+
+
 def get_oid(name):
     if name == '@':name = 'HEAD' 
     # 使用名字
@@ -145,8 +159,8 @@ def get_oid(name):
         f'refs/heads/{name}',
     ]
     for ref in refs_to_try:
-        if data.get_ref(ref):
-            return data.get_ref(ref)
+        if data.get_ref(ref, deref=False).value:
+            return data.get_ref(ref).value
 
     # 使用SHA-1
     is_hex = all(c in string.hexdigits for c in name)
@@ -155,11 +169,15 @@ def get_oid(name):
     
     assert False, f'Unknown name {name}'
 
+
+
 # 通用的忽略函数
 # 增强检查：同时检查 .git 和 .ugit
 def is_ignored(path):
     normalized_path = path.replace('\\', '/')
     return '.ugit' in normalized_path.split('/') or '.git' in normalized_path.split('/')
+
+
 
 # # linux 下的隐藏文件
 # def is_ignored(path):

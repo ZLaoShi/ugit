@@ -11,7 +11,8 @@ def main():
     args = parse_args()
     # 调用绑定的 func
     args.func(args)
-    
+    print('this main')
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -69,34 +70,46 @@ def parse_args():
     k_parser = commands.add_parser('k')
     k_parser.set_defaults(func=k)
 
+    # branch 子命令
+    branch_parser = commands.add_parser('branch')
+    branch_parser.set_defaults(func=branch)
+    branch_parser.add_argument('name')
+    branch_parser.add_argument('start_point', default='@', type=oid, nargs='?')
+
     return parser.parse_args()
 
 def init(args):
     data.init()
     print(f'Initialized empty ugit repository in {os.getcwd}/{data.GIT_DIR}')
 
+
 # hash_object: 存储对象进入数据库并返回对应oid
 def hash_object(args):
     with open (args.file, 'rb') as f:
         print(data.hash_object(f.read()))
+
 
 # cat-file: 显示对象内容
 def cat_file(args):
     sys.stdout.flush()
     sys.stdout.buffer.write(data.get_object(args.object, expected=None))
 
+
 # write-tree: 写入目录树(会覆盖当前目录)
 def write_tree(args):
     print(base.write_tree())
+
 
 # read-tree: 读取目录树
 def read_tree(args):
     base.read_tree(args.tree)
 
+
 # commit: 创建提交
 def commit(args):
     # args.message 由 commit_parser.add_argument('-m', '--message', required=True) 的 '--message' 自动生成并被绑定用户输入
     print(base.commit(args.message))
+
 
 # log: 显示提交历史
 def log(args):
@@ -107,13 +120,22 @@ def log(args):
         print(textwrap.indent(commit.message, '    '))
         print('')
 
+
 # checkout: 切换到提交 
 def checkout(args):
     base.checkout(args.oid)
 
+
 # tag: 创建标签
 def tag(args):
     base.create_tag(args.name, args.oid)
+
+
+# branch: 创建分支
+def branch(args):
+    base.create_branch(args.name, args.start_point)
+    print(f'Branch {args.name} created at {args.start_point[:10]}')
+
 
 # k: 可视化记录
 def k(args):
@@ -125,10 +147,11 @@ def k(args):
 '''
     # 1. 收集所有引用的OID
     oids = set()
-    for refname, ref in data.iter_refs():
+    for refname, ref in data.iter_refs(deref=False):
         dot += f'"{refname}" [shape=note]\n'
-        dot += f'"{refname}" -> "{ref}"\n'
-        oids.add(ref)
+        dot += f'"{refname}" -> "{ref.value}"\n'
+        if not ref.symbolic:
+            oids.add(ref.value)
 
     # 2. 遍历所有提交及其父提交
     for oid in base.iter_commits_and_parents(oids):

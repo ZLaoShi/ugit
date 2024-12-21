@@ -1,32 +1,54 @@
 import os
 import hashlib
 
+from collections import namedtuple
+
 GIT_DIR = '.ugit'
 
 def init():
     os.makedirs(GIT_DIR)
     os.makedirs(f'{GIT_DIR}/objects')
 
-def update_ref(ref, oid):
+RefValue = namedtuple('RefValue', ['symbolic', 'value'])
+
+def update_ref(ref, value, deref=True):
+    assert not value.symbolic
+    ref = _get_ref_internal(ref, deref)[0]
     ref_path = f'{GIT_DIR}/{ref}'
     os.makedirs(os.path.dirname(ref_path), exist_ok=True)
     with open(ref_path, 'w') as f:
-        f.write(oid)
+        f.write(value.value)
 
-def get_ref(ref):
+
+def get_ref(ref, deref=True):
+    return _get_ref_internal(ref, deref)[1]
+
+
+def _get_ref_internal(ref, deref=True):
     ref_path = f'{GIT_DIR}/{ref}'
+    value = None
     if os.path.isfile(ref_path):
         with open(ref_path) as f:
-            return f.read().strip()
+            value = f.read().strip()
 
-def iter_refs():
+    symbolic = bool(value) and value.startswith('ref:')
+    if symbolic:
+        value = value.split(':', 1)[1].strip()
+        if deref:
+            return _get_ref_internal(value, deref=True)
+    
+    return ref, RefValue (symbolic=symbolic, value=value)
+
+
+def iter_refs(deref=True):
     refs = ['HEAD']
     for root, _, filenames in os.walk(f'{GIT_DIR}/refs/'):
         root = os.path.relpath(root, GIT_DIR)
         refs.extend(f'{root}/{name}' for name in filenames)
     
     for refname in refs:
-        yield refname, get_ref(refname)
+        yield refname, get_ref(refname, deref=deref)
+
 
 def hash_object(data, type_='blob'):
     obj = type_.encode() + b'\x00' + data
@@ -34,6 +56,7 @@ def hash_object(data, type_='blob'):
     with open(f'{GIT_DIR}/objects/{oid}', 'wb') as out:
         out.write(obj)
     return oid
+
 
 def get_object(oid, expected='blob'):
     with open(f'{GIT_DIR}/objects/{oid}', 'rb') as f:

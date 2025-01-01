@@ -17,7 +17,7 @@ RefValue = namedtuple('RefValue', ['symbolic', 'value'])
 def update_ref(ref, value, deref=True):
     ref = _get_ref_internal(ref, deref)[0]
 
-    assert not value.value
+    assert value.value
     if value.symbolic:
         value = f'ref: {value.value}'
     else:

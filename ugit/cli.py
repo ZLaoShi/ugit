@@ -58,7 +58,7 @@ def parse_args():
     #checkout 子命令
     checkout_parser = commands.add_parser('checkout')
     checkout_parser.set_defaults(func=checkout)
-    checkout_parser.add_argument('oid', type=oid)
+    checkout_parser.add_argument('commit')
 
     # tag 子命令
     tag_parser = commands.add_parser('tag')
@@ -123,7 +123,7 @@ def log(args):
 
 # checkout: 切换到提交 
 def checkout(args):
-    base.checkout(args.oid)
+    base.checkout(args.commit)
 
 
 # tag: 创建标签

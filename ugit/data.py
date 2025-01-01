@@ -3,21 +3,31 @@ import hashlib
 
 from collections import namedtuple
 
+
 GIT_DIR = '.ugit'
 
 def init():
     os.makedirs(GIT_DIR)
     os.makedirs(f'{GIT_DIR}/objects')
 
+
 RefValue = namedtuple('RefValue', ['symbolic', 'value'])
 
+
 def update_ref(ref, value, deref=True):
-    assert not value.symbolic
+    ref = _get_ref_internal(ref, deref)[0]
+
+    assert not value.value
+    if value.symbolic:
+        value = f'ref: {value.value}'
+    else:
+        value = value.value
+
     ref = _get_ref_internal(ref, deref)[0]
     ref_path = f'{GIT_DIR}/{ref}'
     os.makedirs(os.path.dirname(ref_path), exist_ok=True)
     with open(ref_path, 'w') as f:
-        f.write(value.value)
+        f.write(value)
 
 
 def get_ref(ref, deref=True):

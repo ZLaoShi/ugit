@@ -3,15 +3,21 @@ digraph commits {
     node [fontname="Microsoft YaHei"];
     edge [fontname="Microsoft YaHei"];
 "HEAD" [shape=note]
-"HEAD" -> "722a6379fa9a878d13361c9f6940bbd71c73e8e3"
+"HEAD" -> "refs/heads/main"
 "refs\heads/main" [shape=note]
-"refs\heads/main" -> "204216d5b54da24a706520c9e1f16d5590360a94"
+"refs\heads/main" -> "251f5b9dd792eac2a49fc105e75d33cdd5a8bac3"
 "refs\tags/tag-add" [shape=note]
 "refs\tags/tag-add" -> "74303e9e2f50ee066a7eae99e1e4a0fbecca150a"
 "refs\tags/test-tag" [shape=note]
 "refs\tags/test-tag" -> "ee7dfcfa2006967df7b4d5b1092cb46d33919e38"
 "refs\tags/test-tag1" [shape=note]
 "refs\tags/test-tag1" -> "27c59c4691cce27beedad6747191a58f078ec5e6"
+"251f5b9dd792eac2a49fc105e75d33cdd5a8bac3" [shape=box style=filled label="251f5b9dd7
+测试head移动"]
+"251f5b9dd792eac2a49fc105e75d33cdd5a8bac3" -> "722a6379fa9a878d13361c9f6940bbd71c73e8e3"
+"722a6379fa9a878d13361c9f6940bbd71c73e8e3" [shape=box style=filled label="722a6379fa
+测试head移动"]
+"722a6379fa9a878d13361c9f6940bbd71c73e8e3" -> "204216d5b54da24a706520c9e1f16d5590360a94"
 "204216d5b54da24a706520c9e1f16d5590360a94" [shape=box style=filled label="204216d5b5
 加入了init后首次提交自动生成master分支"]
 "204216d5b54da24a706520c9e1f16d5590360a94" -> "9f6eab1c952b2c271ef907528e1022d09c3804c7"
@@ -44,7 +50,4 @@ digraph commits {
 "133923213dbc50e0476aceadfc15823d6cc1a431" -> "df7393b3474aa723efaaf39c94f7304057dbeca6"
 "df7393b3474aa723efaaf39c94f7304057dbeca6" [shape=box style=filled label="df7393b347
 这是一条测试提交信息4"]
-"722a6379fa9a878d13361c9f6940bbd71c73e8e3" [shape=box style=filled label="722a6379fa
-测试head移动"]
-"722a6379fa9a878d13361c9f6940bbd71c73e8e3" -> "204216d5b54da24a706520c9e1f16d5590360a94"
 }

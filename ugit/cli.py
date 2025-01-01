@@ -11,7 +11,7 @@ def main():
     args = parse_args()
     # 调用绑定的 func
     args.func(args)
-    print('this main')
+    print('Done')
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -79,7 +79,7 @@ def parse_args():
     return parser.parse_args()
 
 def init(args):
-    data.init()
+    base.init()
     print(f'Initialized empty ugit repository in {os.getcwd}/{data.GIT_DIR}')
 
 

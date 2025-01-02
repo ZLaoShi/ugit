@@ -11,7 +11,7 @@ def main():
     args = parse_args()
     # 调用绑定的 func
     args.func(args)
-    print('Done')
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -73,8 +73,12 @@ def parse_args():
     # branch 子命令
     branch_parser = commands.add_parser('branch')
     branch_parser.set_defaults(func=branch)
-    branch_parser.add_argument('name')
+    branch_parser.add_argument('name', nargs='?')
     branch_parser.add_argument('start_point', default='@', type=oid, nargs='?')
+
+    # status 子命令
+    status_parser = commands.add_parser('status')
+    status_parser.set_defaults(func=status)
 
     return parser.parse_args()
 
@@ -132,9 +136,15 @@ def tag(args):
 
 
 # branch: 创建分支
-def branch(args):
-    base.create_branch(args.name, args.start_point)
-    print(f'Branch {args.name} created at {args.start_point[:10]}')
+def branch (args):
+    if not args.name:
+        current = base.get_branch_name()
+        for branch in base.iter_branch_names():
+            prefix = '*' if branch == current else ' '
+            print (f'{prefix} {branch}')
+    else:
+        base.create_branch(args.name, args.start_point)
+        print(f'Branch {args.name} created at {args.start_point[:10]}')
 
 
 # k: 可视化记录
@@ -182,3 +192,12 @@ def k(args):
             print('Graphviz not found. DOT 格式输出如下:')
             print('\n' + dot)
             print('\n请将以上内容复制到 https://dreampuf.github.io/GraphvizOnline/')
+
+
+def status(args):
+    HEAD = base.get_oid('@')
+    branch = base.get_branch_name()
+    if branch:
+        print(f'On branch {branch}')
+    else:
+        print(f'HEAD detached at {HEAD[:10]}')

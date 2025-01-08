@@ -4,14 +4,19 @@ digraph commits {
     edge [fontname="Microsoft YaHei"];
 "HEAD" [shape=note]
 "HEAD" -> "refs/heads/main"
+"refs\heads/dev" [shape=note]
+"refs\heads/dev" -> "251f5b9dd792eac2a49fc105e75d33cdd5a8bac3"
 "refs\heads/main" [shape=note]
-"refs\heads/main" -> "251f5b9dd792eac2a49fc105e75d33cdd5a8bac3"
+"refs\heads/main" -> "52ab0f70381a3ece426177fe6b9d784537e52005"
 "refs\tags/tag-add" [shape=note]
 "refs\tags/tag-add" -> "74303e9e2f50ee066a7eae99e1e4a0fbecca150a"
 "refs\tags/test-tag" [shape=note]
 "refs\tags/test-tag" -> "ee7dfcfa2006967df7b4d5b1092cb46d33919e38"
 "refs\tags/test-tag1" [shape=note]
 "refs\tags/test-tag1" -> "27c59c4691cce27beedad6747191a58f078ec5e6"
+"52ab0f70381a3ece426177fe6b9d784537e52005" [shape=box style=filled label="52ab0f7038
+添加了reset功能"]
+"52ab0f70381a3ece426177fe6b9d784537e52005" -> "251f5b9dd792eac2a49fc105e75d33cdd5a8bac3"
 "251f5b9dd792eac2a49fc105e75d33cdd5a8bac3" [shape=box style=filled label="251f5b9dd7
 测试head移动"]
 "251f5b9dd792eac2a49fc105e75d33cdd5a8bac3" -> "722a6379fa9a878d13361c9f6940bbd71c73e8e3"

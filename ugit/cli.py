@@ -12,7 +12,6 @@ def main():
     # 调用绑定的 func
     args.func(args)
 
-
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -80,6 +79,11 @@ def parse_args():
     status_parser = commands.add_parser('status')
     status_parser.set_defaults(func=status)
 
+    # reset_parser 子命令
+    reset_parser = commands.add_parser('reset')
+    reset_parser.set_defaults(func=reset)
+    reset_parser.add_argument('commit', type=oid)
+
     return parser.parse_args()
 
 def init(args):
@@ -117,10 +121,15 @@ def commit(args):
 
 # log: 显示提交历史
 def log(args):
-    for oid in base.iter_commits_and_parents({args.oid}):
-        commit = base.get_commit(oid)
+    refs = {}
+    for refname, ref in data.iter_refs():
+        refs.setdefault(ref.value, []).append(refname)
 
-        print(f'commit {oid}')
+    for oid in base.iter_commits_and_parents({args.oid}):
+        commit = base.get_commit(oid)   
+
+        refs_str = f' ({", ".join(refs[oid])})' if oid in refs else ''
+        print(f'commit {oid}{refs_str}\n')
         print(textwrap.indent(commit.message, '    '))
         print('')
 
@@ -201,3 +210,7 @@ def status(args):
         print(f'On branch {branch}')
     else:
         print(f'HEAD detached at {HEAD[:10]}')
+
+
+def reset(args):
+    base.reset(args.commit)

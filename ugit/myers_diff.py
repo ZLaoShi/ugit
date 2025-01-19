@@ -47,31 +47,45 @@ def shortest_edit(a: List[str], b: List[str]) -> List[Tuple[str, str]]:
     
     return []
 
-def _build_diff(a: List[str], b: List[str], 
-                paths: Dict[Tuple[int, int], Tuple[int, int]], 
-                n: int, m: int) -> List[Tuple[str, str]]:
-    """构建差异结果"""
+def _build_diff(a: List[str], b: List[str], paths, n, m):
+    """构建差异结果，按正确顺序"""
     diff = []
     x, y = n, m
     
+    # 收集所有坐标点
+    coords = []
     while x > 0 or y > 0:
+        coords.append((x, y))
         prev_x, prev_y = paths.get((x, y), (0, 0))
-        while x > prev_x and y > prev_y:
-            x -= 1
-            y -= 1
+        x, y = prev_x, prev_y
+    
+    # 反转并处理
+    coords.reverse()
+    x = y = 0
+    
+    # 按顺序构建差异
+    for next_x, next_y in coords:
+        # 处理未变化的行
+        while x < next_x and y < next_y:
             diff.append(('=', a[x]))
-        if x > prev_x:
-            x -= 1
+            x += 1
+            y += 1
+        # 处理删除的行
+        if x < next_x:
             diff.append(('-', a[x]))
-        elif y > prev_y:
-            y -= 1
+            x += 1
+        # 处理添加的行
+        if y < next_y:
             diff.append(('+', b[y]))
+            y += 1
             
-    return list(reversed(diff))
+    return diff
 
-def format_diff(diff: List[Tuple[str, str]]) -> bytes:
-    """格式化差异输出"""
+def format_diff(diff):
+    """格式化diff输出，对齐行序"""
     output = []
+    
+    # 按行处理
     for op, line in diff:
         if op == '+':
             output.append(f'+{line}')
@@ -79,4 +93,5 @@ def format_diff(diff: List[Tuple[str, str]]) -> bytes:
             output.append(f'-{line}')
         else:
             output.append(f' {line}')
+    
     return '\n'.join(output).encode()

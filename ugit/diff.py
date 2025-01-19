@@ -26,37 +26,6 @@ def diff_trees(t_from, t_to):
     return output
 
 
-# def find_git_diff():
-#     """查找 Git diff 命令的位置"""
-#     # 1. 检查环境变量
-#     git_path = os.getenv('GIT_PATH')
-#     if git_path:
-#         diff_path = os.path.join(git_path, 'usr', 'bin', 'diff.exe')
-#         if os.path.exists(diff_path):
-#             return diff_path
-
-#     # 2. 常见安装路径
-#     possible_paths = [
-#         r'C:\Program Files\Git\usr\bin\diff.exe',
-#         r'C:\Program Files (x86)\Git\usr\bin\diff.exe',
-#         r'D:\Program Files\Git\usr\bin\diff.exe',
-#         r'E:\Program Files\Git\usr\bin\diff.exe',
-#     ]
-    
-#     # 3. 从 PATH 环境变量搜索
-#     for path in os.getenv('PATH', '').split(os.pathsep):
-#         diff_path = os.path.join(path, 'diff.exe')
-#         if os.path.exists(diff_path):
-#             return diff_path
-            
-#     # 4. 检查可能的安装路径
-#     for path in possible_paths:
-#         if os.path.exists(path):
-#             return path
-            
-#     raise FileNotFoundError('未找到 Git diff 命令，请确保 Git 已安装并添加到 PATH')
-
-
 def diff_blobs(o_from, o_to, path='blob'):
     """使用 Myers 算法比较两个文件对象"""
     try:
@@ -69,3 +38,34 @@ def diff_blobs(o_from, o_to, path='blob'):
     except UnicodeDecodeError:
         # 如果是二进制文件，只显示文件已更改
         return f'Binary files {path} differ\n'.encode()
+    
+
+def find_git_diff():
+    """查找 Git diff 命令的位置"""
+    # 1. 检查环境变量
+    git_path = os.getenv('GIT_PATH')
+    if git_path:
+        diff_path = os.path.join(git_path, 'usr', 'bin', 'diff.exe')
+        if os.path.exists(diff_path):
+            return diff_path
+
+    # 2. 常见安装路径
+    possible_paths = [
+        r'C:\Program Files\Git\usr\bin\diff.exe',
+        r'C:\Program Files (x86)\Git\usr\bin\diff.exe',
+        r'D:\Program Files\Git\usr\bin\diff.exe',
+        r'E:\Program Files\Git\usr\bin\diff.exe',
+    ]
+    
+    # 3. 从 PATH 环境变量搜索
+    for path in os.getenv('PATH', '').split(os.pathsep):
+        diff_path = os.path.join(path, 'diff.exe')
+        if os.path.exists(diff_path):
+            return diff_path
+            
+    # 4. 检查可能的安装路径
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+            
+    raise FileNotFoundError('未找到 Git diff 命令，请确保 Git 已安装并添加到 PATH')

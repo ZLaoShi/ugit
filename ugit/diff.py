@@ -47,7 +47,58 @@ def diff_blobs(o_from, o_to, path='blob'):
     except UnicodeDecodeError:
         # 如果是二进制文件，只显示文件已更改
         return f'Binary files {path} differ\n'.encode()
+
+
+def merge_trees(t_HEAD, t_other):
+    tree = {}
+    for path, o_HEAD, o_other in compare_trees(t_HEAD, t_other):
+        tree[path] = merge_blobs(o_HEAD, o_other)
+    return tree
+
+
+def merge_blobs(o_HEAD, o_other):
+    """使用Myers算法实现条件式合并"""
+    try:
+        # 获取内容
+        content_HEAD = data.get_object(o_HEAD).decode().splitlines() if o_HEAD else []
+        content_other = data.get_object(o_other).decode().splitlines() if o_other else []
+        
+        # 获取差异
+        diff_result = myers_diff.shortest_edit(content_HEAD, content_other)
+        
+        # 构建条件式输出
+        output = []
+        current_block = None
+        
+        for op, line in diff_result:
+            if op == '=':
+                if current_block:
+                    output.append('#endif')
+                    current_block = None
+                output.append(line)
+            elif op == '-':
+                if current_block != 'HEAD':
+                    if current_block:
+                        output.append('#endif')
+                    output.append('#ifdef HEAD')
+                    current_block = 'HEAD'
+                output.append(line)
+            elif op == '+':
+                if current_block != 'OTHER':
+                    if current_block:
+                        output.append('#endif')
+                    output.append('#else')
+                    current_block = 'OTHER'
+                output.append(line)
+                
+        if current_block:
+            output.append('#endif')
+            
+        return '\n'.join(output).encode()
     
+    except UnicodeDecodeError:
+        return b'Binary files differ\n'
+
 
 def find_git_diff():
     """查找 Git diff 命令的位置"""

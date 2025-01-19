@@ -90,10 +90,15 @@ def parse_args():
     status_parser = commands.add_parser('status')
     status_parser.set_defaults(func=status)
 
-    # reset_parser 子命令
+    # reset 子命令
     reset_parser = commands.add_parser('reset')
     reset_parser.set_defaults(func=reset)
     reset_parser.add_argument('commit', type=oid)
+
+    # merge 子命令
+    merge_parser = commands.add_parser('merge')
+    merge_parser.set_defaults(func=merge)
+    merge_parser.add_argument('commit', type=oid)
 
     return parser.parse_args()
 
@@ -261,3 +266,7 @@ def status(args):
 # reset: 移动分支
 def reset(args):
     base.reset(args.commit)
+
+# megre: 合并分支
+def merge(args):
+    base.merge(args.commit) 

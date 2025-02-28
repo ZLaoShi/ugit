@@ -57,30 +57,57 @@ def merge_trees(t_HEAD, t_other):
 
 
 def merge_blobs(o_HEAD, o_other):
-    """使用Myers算法实现条件式合并"""
+#ifdef HEAD
+    """使用Myers算法实现条件式合并，优化重复行处理"""
+#endif /* HEAD */
     try:
         # 获取内容
         content_HEAD = data.get_object(o_HEAD).decode().splitlines() if o_HEAD else []
         content_other = data.get_object(o_other).decode().splitlines() if o_other else []
         
+#ifdef HEAD
+        # 处理特殊情况
+        if not content_HEAD:
+#endif /* HEAD */
+#ifndef HEAD
         # 处理文件添加或删除的特殊情况
-        if not content_HEAD:  # 文件在HEAD中不存在，完全添加
+#endif /* ! HEAD */
             return '\n'.join(content_other).encode()
-        if not content_other:  # 文件在other中不存在，保持HEAD版本
+#ifdef HEAD
+        if not content_other:
+#endif /* HEAD */
             return '\n'.join(content_HEAD).encode()
-            
-        # 相同文件无需合并
         if content_HEAD == content_other:
             return '\n'.join(content_HEAD).encode()
         
         # 获取差异
         diff_result = myers_diff.shortest_edit(content_HEAD, content_other)
         
+#ifdef HEAD
+        # 预处理差异结果以检测和移除重复行
+        processed_diff = []
+        common_lines = set()  # 跟踪已经作为公共行输出的内容
+        
+        # 第一遍：识别所有共同行
+        for op, line in diff_result:
+            if op == '=':
+                common_lines.add(line)
+        
+        # 第二遍：构建处理后的差异
+        for op, line in diff_result:
+            # 如果这是一个添加行，但它与公共行重复，则跳过
+            if op == '+' and line in common_lines:
+                continue
+            processed_diff.append((op, line))
+#endif /* HEAD */
+        
         # 构建条件式输出
         output = []
         current_block = None
+#ifdef HEAD
         
-        for op, line in diff_result:
+        for op, line in processed_diff:
+#endif /* HEAD */
             if op == '=':  # 相同行
                 if current_block:
                     if current_block == 'HEAD':

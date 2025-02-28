@@ -63,6 +63,16 @@ def merge_blobs(o_HEAD, o_other):
         content_HEAD = data.get_object(o_HEAD).decode().splitlines() if o_HEAD else []
         content_other = data.get_object(o_other).decode().splitlines() if o_other else []
         
+        # 处理文件添加或删除的特殊情况
+        if not content_HEAD:  # 文件在HEAD中不存在，完全添加
+            return '\n'.join(content_other).encode()
+        if not content_other:  # 文件在other中不存在，保持HEAD版本
+            return '\n'.join(content_HEAD).encode()
+            
+        # 相同文件无需合并
+        if content_HEAD == content_other:
+            return '\n'.join(content_HEAD).encode()
+        
         # 获取差异
         diff_result = myers_diff.shortest_edit(content_HEAD, content_other)
         
@@ -71,28 +81,34 @@ def merge_blobs(o_HEAD, o_other):
         current_block = None
         
         for op, line in diff_result:
-            if op == '=':
+            if op == '=':  # 相同行
                 if current_block:
-                    output.append('#endif')
+                    if current_block == 'HEAD':
+                        output.append('#endif /* HEAD */')
+                    else:
+                        output.append('#endif /* ! HEAD */')
                     current_block = None
                 output.append(line)
-            elif op == '-':
+            elif op == '-':  # 在HEAD中的行
                 if current_block != 'HEAD':
                     if current_block:
-                        output.append('#endif')
+                        output.append('#endif /* ! HEAD */')
                     output.append('#ifdef HEAD')
                     current_block = 'HEAD'
                 output.append(line)
-            elif op == '+':
+            elif op == '+':  # 在OTHER中的行
                 if current_block != 'OTHER':
                     if current_block:
-                        output.append('#endif')
-                    output.append('#else')
+                        output.append('#endif /* HEAD */')
+                    output.append('#ifndef HEAD')
                     current_block = 'OTHER'
                 output.append(line)
                 
         if current_block:
-            output.append('#endif')
+            if current_block == 'HEAD':
+                output.append('#endif /* HEAD */')
+            else:
+                output.append('#endif /* ! HEAD */')
             
         return '\n'.join(output).encode()
     

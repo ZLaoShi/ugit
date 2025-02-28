@@ -7,12 +7,37 @@ class Point:
     y: int
 
 def shortest_edit(a: List[str], b: List[str]) -> List[Tuple[str, str]]:
-    """Myers差分算法核心实现"""
+    """
+    使用Myers差分算法计算两个序列间的最短编辑脚本。
+    
+    Args:
+        a: 源序列
+        b: 目标序列
+        
+    Returns:
+        List[Tuple[str, str]]: 编辑操作列表，每个元素是(操作类型, 内容)的元组
+            操作类型可以是：
+            '+': 添加
+            '-': 删除
+            '=': 保持不变
+            
+    Raises:
+        ValueError: 当输入序列为None时
+    """
+
+    # 边界处理
+    if not a and not b:
+        return []
+    if not a:
+        return [('+', x) for x in b]
+    if not b:
+        return [('-', x) for x in a]
+    
     n, m = len(a), len(b)
     max_d = n + m
     
-    # 存储每个d级别的路径端点
-    v: Dict[int, int] = {1: 0}
+    # 存储每个d级别的路径端点1
+    v: Dict[int, int] = {0: 0}
     # 存储路径
     paths: Dict[Tuple[int, int], Tuple[int, int]] = {}
     
@@ -82,7 +107,7 @@ def _build_diff(a: List[str], b: List[str], paths, n, m):
     return diff
 
 def format_diff(diff):
-    """格式化diff输出，对齐行序"""
+    """格式化diff输出, 对齐行序"""
     output = []
     
     # 按行处理

@@ -150,6 +150,13 @@ def merge (other):
     print('Merged in working directory. Use "commit" to finish merge.')
 
 
+def  get_merge_base(oid1, oid2):
+    parentsl = set(iter_commits_and_parents({oid}))
+
+    for oid in iter_commits_and_parents({oid2}):
+        if oid in parentsl:
+            return oid
+
 def create_tag(name, oid):
     data.update_ref(f'refs/tags/{name}', data.RefValue(symbolic=False, value=oid))
 

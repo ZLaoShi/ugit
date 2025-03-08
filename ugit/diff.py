@@ -57,25 +57,16 @@ def merge_trees(t_HEAD, t_other):
 
 
 def merge_blobs(o_HEAD, o_other):
-#ifdef HEAD
     """使用Myers算法实现条件式合并，优化重复行处理"""
-#endif /* HEAD */
     try:
         # 获取内容
         content_HEAD = data.get_object(o_HEAD).decode().splitlines() if o_HEAD else []
         content_other = data.get_object(o_other).decode().splitlines() if o_other else []
         
-#ifdef HEAD
         # 处理特殊情况
         if not content_HEAD:
-#endif /* HEAD */
-#ifndef HEAD
-        # 处理文件添加或删除的特殊情况
-#endif /* ! HEAD */
             return '\n'.join(content_other).encode()
-#ifdef HEAD
         if not content_other:
-#endif /* HEAD */
             return '\n'.join(content_HEAD).encode()
         if content_HEAD == content_other:
             return '\n'.join(content_HEAD).encode()
@@ -83,7 +74,6 @@ def merge_blobs(o_HEAD, o_other):
         # 获取差异
         diff_result = myers_diff.shortest_edit(content_HEAD, content_other)
         
-#ifdef HEAD
         # 预处理差异结果以检测和移除重复行
         processed_diff = []
         common_lines = set()  # 跟踪已经作为公共行输出的内容
@@ -99,15 +89,12 @@ def merge_blobs(o_HEAD, o_other):
             if op == '+' and line in common_lines:
                 continue
             processed_diff.append((op, line))
-#endif /* HEAD */
         
         # 构建条件式输出
         output = []
         current_block = None
-#ifdef HEAD
         
         for op, line in processed_diff:
-#endif /* HEAD */
             if op == '=':  # 相同行
                 if current_block:
                     if current_block == 'HEAD':

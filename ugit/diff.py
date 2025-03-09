@@ -57,7 +57,7 @@ def merge_trees(t_HEAD, t_other):
 
 
 def merge_blobs(o_HEAD, o_other):
-    """使用Myers算法实现条件式合并，优化重复行处理"""
+    """使用标准的 diff3 格式实现合并"""
     try:
         # 获取内容
         content_HEAD = data.get_object(o_HEAD).decode().splitlines() if o_HEAD else []
@@ -74,61 +74,50 @@ def merge_blobs(o_HEAD, o_other):
         # 获取差异
         diff_result = myers_diff.shortest_edit(content_HEAD, content_other)
         
-        # 预处理差异结果以检测和移除重复行
+        # 预处理差异结果以检测重复行
         processed_diff = []
-        common_lines = set()  # 跟踪已经作为公共行输出的内容
+        common_lines = set()
         
-        # 第一遍：识别所有共同行
+        # 识别共同行
         for op, line in diff_result:
             if op == '=':
                 common_lines.add(line)
-        
-        # 第二遍：构建处理后的差异
+                
+        # 构建差异
         for op, line in diff_result:
-            # 如果这是一个添加行，但它与公共行重复，则跳过
             if op == '+' and line in common_lines:
                 continue
             processed_diff.append((op, line))
         
-        # 构建条件式输出
+        # 使用标准 diff3 格式构建输出
         output = []
-        current_block = None
+        in_conflict = False
         
         for op, line in processed_diff:
-            if op == '=':  # 相同行
-                if current_block:
-                    if current_block == 'HEAD':
-                        output.append('#endif /* HEAD */')
-                    else:
-                        output.append('#endif /* ! HEAD */')
-                    current_block = None
+            if op == '=':
+                if in_conflict:
+                    output.append('>>>>>>>')
+                    in_conflict = False
                 output.append(line)
-            elif op == '-':  # 在HEAD中的行
-                if current_block != 'HEAD':
-                    if current_block:
-                        output.append('#endif /* ! HEAD */')
-                    output.append('#ifdef HEAD')
-                    current_block = 'HEAD'
+            elif op == '-' and not in_conflict:
+                output.append('<<<<<<< HEAD')
                 output.append(line)
-            elif op == '+':  # 在OTHER中的行
-                if current_block != 'OTHER':
-                    if current_block:
-                        output.append('#endif /* HEAD */')
-                    output.append('#ifndef HEAD')
-                    current_block = 'OTHER'
+                output.append('=======')
+                in_conflict = True
+            elif op == '+':
+                if not in_conflict:
+                    output.append('<<<<<<< HEAD')
+                    output.append('=======')
+                    in_conflict = True
                 output.append(line)
                 
-        if current_block:
-            if current_block == 'HEAD':
-                output.append('#endif /* HEAD */')
-            else:
-                output.append('#endif /* ! HEAD */')
+        if in_conflict:
+            output.append('>>>>>>>')
             
         return '\n'.join(output).encode()
-    
+        
     except UnicodeDecodeError:
         return b'Binary files differ\n'
-
 
 def find_git_diff():
     """查找 Git diff 命令的位置"""

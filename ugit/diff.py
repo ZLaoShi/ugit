@@ -114,7 +114,11 @@ def merge_blobs(o_HEAD, o_other):
         if in_conflict:
             output.append('>>>>>>>')
             
-        return '\n'.join(output).encode()
+        merged_content = '\n'.join(output).encode()
+
+        # 尝试清理标记
+        clened_content = clean_merge_markers(merged_content.decode())
+        return clened_content.encode()
         
     except UnicodeDecodeError:
         return b'Binary files differ\n'
@@ -148,3 +152,42 @@ def find_git_diff():
             return path
             
     raise FileNotFoundError('未找到 Git diff 命令，请确保 Git 已安装并添加到 PATH')
+
+def clean_merge_markers(content):
+    """清理标准 diff3 格式的合并标记，但只在没有实际冲突的情况下"""
+    lines = []
+    head_section = []    # HEAD 部分的内容
+    other_section = []   # OTHER 部分的内容
+    current_section = None
+    in_conflict = False
+    has_conflict = False
+    
+    for line in content.splitlines():
+        if line.startswith('<<<<<<< HEAD'):
+            in_conflict = True
+            current_section = head_section
+            continue
+        elif line == '=======':
+            current_section = other_section
+            continue
+        elif line.startswith('>>>>>>>'):
+            in_conflict = False
+            # 检查这个冲突块是否有实际冲突
+            if set(head_section) != set(other_section):
+                # 发现冲突，恢复原始内容
+                return content
+            # 一个冲突块处理完毕，重置状态
+            head_section = []
+            other_section = []
+            continue
+            
+        if in_conflict:
+            current_section.append(line)
+        else:
+            lines.append(line)
+    
+    # 如果还在处理冲突块，说明格式有问题，返回原始内容
+    if in_conflict:
+        return content
+        
+    return '\n'.join(lines)

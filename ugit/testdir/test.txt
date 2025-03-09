@@ -1,10 +1,6 @@
 def test_function():
     print("Common line 1")
     print("Common line 2")
-#ifdef HEAD
-    print("Main branch specific")
-    return True
-#endif /* HEAD */
-#ifndef HEAD
     print("Test branch specific")
-#endif /* ! HEAD */
+    print("Another test line")
+    return True

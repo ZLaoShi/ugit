@@ -1,7 +1,6 @@
 对https://www.leshenko.net/p/ugit/#hash-object  的练习
 
-## win系统下安装后的执行
-创建父目录ugit，粘贴setup文件到父目录和ugit目录同级，如下
+## win系统下克隆后
 ```
 Mode                 LastWriteTime         Length Name
 ----                 -------------         ------ ----

@@ -65,61 +65,75 @@ def merge_blobs(o_base, o_HEAD, o_other):
         content_HEAD = data.get_object(o_HEAD).decode().splitlines() if o_HEAD else []
         content_other = data.get_object(o_other).decode().splitlines() if o_other else []
         
-        # 处理特殊情况
-        if not content_HEAD:
-            return '\n'.join(content_other).encode()
-        if not content_other:
-            return '\n'.join(content_HEAD).encode()
-        if content_HEAD == content_other:
-            return '\n'.join(content_HEAD).encode()
+        # 处理特殊情况保持不变...
+
+        # 修改差异收集逻辑
+        base_to_HEAD = myers_diff.shortest_edit(content_base, content_HEAD)
+        base_to_other = myers_diff.shortest_edit(content_base, content_other)
         
-        # 获取差异
-        HEAD_changes = set()
-        other_changes = set()
-        base_lines = set(content_base)
+        # 更精确地收集变更
+        HEAD_changes = []  # 改用列表保持顺序
+        other_changes = []
+        base_lines = content_base  # 不再使用集合，保持顺序
         
-        # 使用正确的格式处理 myers_diff 结果
-        for op, line in myers_diff.shortest_edit(content_base, content_HEAD):
-            if op == '+':  # 新增或替换的行
-                HEAD_changes.add(line)
+        # 收集 HEAD 的变更
+        for op, line in base_to_HEAD:
+            if op == '+':
+                HEAD_changes.append(line)
+            elif op == '-':
+                # 记录删除的行
+                base_idx = content_base.index(line)
+                HEAD_changes.append(None)  # 标记删除
                 
-        for op, line in myers_diff.shortest_edit(content_base, content_other):
-            if op == '+':  # 新增或替换的行
-                other_changes.add(line)
+        # 收集 other 的变更
+        for op, line in base_to_other:
+            if op == '+':
+                other_changes.append(line)
+            elif op == '-':
+                other_changes.append(None)  # 标记删除
         
-        # 处理冲突和合并
+        # 构建合并结果
         output = []
         in_conflict = False
+        i = 0  # 跟踪当前处理的行位置
         
-        for line in content_HEAD:
+        while i < len(content_HEAD):
+            line = content_HEAD[i]
+            
+            # 检查冲突：两边都改了相同行
             if line in other_changes and line not in base_lines:
-                # 实际冲突：双方都改了相同的行
                 if not in_conflict:
                     output.append('<<<<<<< HEAD')
                     in_conflict = True
                 output.append(line)
-            elif line in HEAD_changes and any(l in other_changes for l in base_lines):
-                # 冲突：一方修改另一方删除的行
+            # 检查冲突：一方修改另一方删除
+            elif line in HEAD_changes and (
+                any(l in other_changes for l in base_lines[i:i+1])):
                 if not in_conflict:
                     output.append('<<<<<<< HEAD')
                     output.append(line)
                     output.append('||||||| base')
-                    output.append('\n'.join(base_lines))
+                    # 只添加相关的基准版本行
+                    output.append(base_lines[i])
                     output.append('=======')
-                    output.append('\n'.join(other_changes))
+                    # 只添加相关的其他版本行
+                    if i < len(other_changes) and other_changes[i]:
+                        output.append(other_changes[i])
                     output.append('>>>>>>>')
             else:
                 if in_conflict:
                     output.append('=======')
-                    output.append('\n'.join(other_changes))
+                    if i < len(other_changes) and other_changes[i]:
+                        output.append(other_changes[i])
                     output.append('>>>>>>>')
                     in_conflict = False
                 output.append(line)
+            i += 1
         
-        # 添加 other 中的新行
+        # 添加 other 中的新行（保持顺序）
         if not in_conflict:
-            for line in other_changes:
-                if line not in HEAD_changes and line not in base_lines:
+            for i, line in enumerate(other_changes):
+                if line and line not in HEAD_changes:
                     output.append(line)
         
         return '\n'.join(output).encode()

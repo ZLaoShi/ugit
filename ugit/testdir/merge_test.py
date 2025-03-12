@@ -1,5 +1,5 @@
 def be_a_cat ():
-    print ("Sleep")
+    print ("Meow")
     return True
 
 def be_a_dog ():

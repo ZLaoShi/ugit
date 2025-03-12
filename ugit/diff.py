@@ -83,13 +83,13 @@ def merge_blobs(o_base, o_HEAD, o_other):
         base_lines = set(content_base)
         
 
-        for edit in base_to_HEAD:
-            if edit.tag in ('replace', 'insert'):
+        for op, i1, i2, j1, j2 in base_to_HEAD:
+            if op in ('replace', 'insert'):
                 HEAD_changes.update(content_HEAD[edit.i1:edit.i2])
         
 
-        for edit in base_to_other:
-            if edit.tag in ('replace', 'insert'):
+        for op, i1, i2, j1, j2 in base_to_other:
+            if op in ('replace', 'insert'):
                 other_changes.update(content_other[edit:j1:edit.j2])
         
 

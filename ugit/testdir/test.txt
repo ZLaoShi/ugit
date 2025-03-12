@@ -1,6 +1,0 @@
-def test_function():
-    print("Common line 1")
-    print("Common line 2")
-    print("Test branch specific")
-    print("Another test line")
-    return True

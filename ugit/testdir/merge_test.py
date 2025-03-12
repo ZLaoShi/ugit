@@ -3,5 +3,5 @@ def be_a_cat ():
     return True
 
 def be_a_dog ():
-    print ("Eat homework")
+    print ("Bark!")
     return False

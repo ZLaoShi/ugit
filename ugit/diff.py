@@ -74,46 +74,39 @@ def merge_blobs(o_base, o_HEAD, o_other):
             return '\n'.join(content_HEAD).encode()
         
         # 获取差异
-        base_to_HEAD = myers_diff.shortest_edit(content_base, content_HEAD)
-        base_to_other = myers_diff.shortest_edit(content_base, content_other)
-        
-        # 分析更改
         HEAD_changes = set()
         other_changes = set()
         base_lines = set(content_base)
         
-
-        for op, i1, i2, j1, j2 in base_to_HEAD:
-            if op in ('replace', 'insert'):
-                HEAD_changes.update(content_HEAD[edit.i1:edit.i2])
+        # 使用正确的格式处理 myers_diff 结果
+        for op, line in myers_diff.shortest_edit(content_base, content_HEAD):
+            if op == '+':  # 新增或替换的行
+                HEAD_changes.add(line)
+                
+        for op, line in myers_diff.shortest_edit(content_base, content_other):
+            if op == '+':  # 新增或替换的行
+                other_changes.add(line)
         
-
-        for op, i1, i2, j1, j2 in base_to_other:
-            if op in ('replace', 'insert'):
-                other_changes.update(content_other[edit:j1:edit.j2])
-        
-
-        # 使用标准 diff3 格式构建输出
+        # 处理冲突和合并
         output = []
         in_conflict = False
         
-        # 处理每一行
         for line in content_HEAD:
             if line in other_changes and line not in base_lines:
-                # 实际冲突:双方都改了相同的行
+                # 实际冲突：双方都改了相同的行
                 if not in_conflict:
                     output.append('<<<<<<< HEAD')
                     in_conflict = True
                 output.append(line)
             elif line in HEAD_changes and any(l in other_changes for l in base_lines):
-                # 冲突:一方修改里另一方删除的行
+                # 冲突：一方修改另一方删除的行
                 if not in_conflict:
                     output.append('<<<<<<< HEAD')
                     output.append(line)
                     output.append('||||||| base')
                     output.append('\n'.join(base_lines))
                     output.append('=======')
-                    output.append('\n'.join(base_changes))
+                    output.append('\n'.join(other_changes))
                     output.append('>>>>>>>')
             else:
                 if in_conflict:
@@ -122,21 +115,18 @@ def merge_blobs(o_base, o_HEAD, o_other):
                     output.append('>>>>>>>')
                     in_conflict = False
                 output.append(line)
-
+        
         # 添加 other 中的新行
         if not in_conflict:
             for line in other_changes:
                 if line not in HEAD_changes and line not in base_lines:
                     output.append(line)
         
-        merged_content = '\n'.join(output).encode()
-
-        # 尝试清理标记
-        clened_content = clean_merge_markers(merged_content.decode())
-        return clened_content.encode()
+        return '\n'.join(output).encode()
         
     except UnicodeDecodeError:
         return b'Binary files differ\n'
+
 
 def find_git_diff():
     """查找 Git diff 命令的位置"""

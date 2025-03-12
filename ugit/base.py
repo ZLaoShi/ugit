@@ -103,7 +103,7 @@ def read_tree(tree_oid):
 def read_tree_merged(t_base, t_HEAD, t_other):
     _empty_current_directory()
     for path, blob in diff.merge_trees(
-            get_tree(t_base), get_tree(HEAD), get_tree(t_other)).items():
+            get_tree(t_base), get_tree(t_HEAD), get_tree(t_other)).items():
         os.makedirs(f'./{os.path.dirname(path)}', exist_ok=True)
         with open(path, 'wb') as f:
             f.write(blob)

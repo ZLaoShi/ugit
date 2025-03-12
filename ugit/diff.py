@@ -49,17 +49,19 @@ def diff_blobs(o_from, o_to, path='blob'):
         return f'Binary files {path} differ\n'.encode()
 
 
-def merge_trees(t_HEAD, t_other):
+def merge_trees(t_base, t_HEAD, t_other):
+    """三方合并树"""
     tree = {}
-    for path, o_HEAD, o_other in compare_trees(t_HEAD, t_other):
-        tree[path] = merge_blobs(o_HEAD, o_other)
+    for path, o_base, o_HEAD, o_other in compare_trees(t_base, t_HEAD, t_other):
+        tree[path] = merge_blobs(o_base, o_HEAD, o_other)
     return tree
 
 
-def merge_blobs(o_HEAD, o_other):
-    """使用标准的 diff3 格式实现合并"""
+def merge_blobs(o_base, o_HEAD, o_other):
+    """三方合并实现"""
     try:
         # 获取内容
+        content_base = data.get_object(o_base).decode().splitlines() if o_base else []
         content_HEAD = data.get_object(o_HEAD).decode().splitlines() if o_HEAD else []
         content_other = data.get_object(o_other).decode().splitlines() if o_other else []
         
@@ -72,48 +74,61 @@ def merge_blobs(o_HEAD, o_other):
             return '\n'.join(content_HEAD).encode()
         
         # 获取差异
-        diff_result = myers_diff.shortest_edit(content_HEAD, content_other)
+        base_to_HEAD = myers_diff.shortest_edit(content_base, content_HEAD)
+        base_to_other = myers_diff.shortest_edit(content_base, content_other)
         
-        # 预处理差异结果以检测重复行
-        processed_diff = []
-        common_lines = set()
+        # 分析更改
+        HEAD_changes = set()
+        other_changes = set()
+        base_lines = set(content_base)
         
-        # 识别共同行
-        for op, line in diff_result:
-            if op == '=':
-                common_lines.add(line)
-                
-        # 构建差异
-        for op, line in diff_result:
-            if op == '+' and line in common_lines:
-                continue
-            processed_diff.append((op, line))
+
+        for edit in base_to_HEAD:
+            if edit.tag in ('replace', 'insert'):
+                HEAD_changes.update(content_HEAD[edit.i1:edit.i2])
         
+
+        for edit in base_to_other:
+            if edit.tag in ('replace', 'insert'):
+                other_changes.update(content_other[edit:j1:edit.j2])
+        
+
         # 使用标准 diff3 格式构建输出
         output = []
         in_conflict = False
         
-        for op, line in processed_diff:
-            if op == '=':
+        # 处理每一行
+        for line in content_HEAD:
+            if line in other_changes and line not in base_lines:
+                # 实际冲突:双方都改了相同的行
+                if not in_conflict:
+                    output.append('<<<<<<< HEAD')
+                    in_conflict = True
+                output.append(line)
+            elif line in HEAD_changes and any(l in other_changes for l in base_lines):
+                # 冲突:一方修改里另一方删除的行
+                if not in_conflict:
+                    output.append('<<<<<<< HEAD')
+                    output.append(line)
+                    output.append('||||||| base')
+                    output.append('\n'.join(base_lines))
+                    output.append('=======')
+                    output.append('\n'.join(base_changes))
+                    output.append('>>>>>>>')
+            else:
                 if in_conflict:
+                    output.append('=======')
+                    output.append('\n'.join(other_changes))
                     output.append('>>>>>>>')
                     in_conflict = False
                 output.append(line)
-            elif op == '-' and not in_conflict:
-                output.append('<<<<<<< HEAD')
-                output.append(line)
-                output.append('=======')
-                in_conflict = True
-            elif op == '+':
-                if not in_conflict:
-                    output.append('<<<<<<< HEAD')
-                    output.append('=======')
-                    in_conflict = True
-                output.append(line)
-                
-        if in_conflict:
-            output.append('>>>>>>>')
-            
+
+        # 添加 other 中的新行
+        if not in_conflict:
+            for line in other_changes:
+                if line not in HEAD_changes and line not in base_lines:
+                    output.append(line)
+        
         merged_content = '\n'.join(output).encode()
 
         # 尝试清理标记

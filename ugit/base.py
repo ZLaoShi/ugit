@@ -91,6 +91,7 @@ def _empty_current_directory():
                 # 所以这是可以接受的。
                 pass
 
+
 def read_tree(tree_oid):
     _empty_current_directory()
     for path, oid in get_tree(tree_oid, base_path='./').items():
@@ -99,12 +100,14 @@ def read_tree(tree_oid):
             f.write(data.get_object(oid))
 
 
-def read_tree_merged(t_HEAD, t_other):
+def read_tree_merged(t_base, t_HEAD, t_other):
     _empty_current_directory()
-    for path, blob in diff.merge_trees(get_tree(t_HEAD), get_tree(t_other)).items():
+    for path, blob in diff.merge_trees(
+            get_tree(t_base), get_tree(HEAD), get_tree(t_other)).items():
         os.makedirs(f'./{os.path.dirname(path)}', exist_ok=True)
         with open(path, 'wb') as f:
             f.write(blob)
+
 
 def commit(message):
     commit = f'tree {write_tree()}\n'
@@ -143,15 +146,19 @@ def reset(oid):
 def merge (other):
     HEAD = data.get_ref('HEAD').value
     assert HEAD
+    merge_base = get_merge_base(other, HEAD)
+    c_base = get_commit(merge_base)
     c_HEAD = get_commit(HEAD)
     c_other = get_commit(other) 
 
-    read_tree_merged(c_HEAD.tree, c_other.tree)
+    data.update_ref('MERGE_HEAD', data.RefValue(symbolic=False, value=other))
+
+    read_tree_merged(c_base.tree, c_HEAD.tree, c_other.tree)
     print('Merged in working directory. Use "commit" to finish merge.')
 
 
 def  get_merge_base(oid1, oid2):
-    parentsl = set(iter_commits_and_parents({oid}))
+    parentsl = set(iter_commits_and_parents({oid1}))
 
     for oid in iter_commits_and_parents({oid2}):
         if oid in parentsl:
@@ -185,7 +192,6 @@ def get_branch_name():
 
 
 Commit = namedtuple('Commit', ['tree', 'parent', 'message'])
-
 
 
 def get_commit(oid):

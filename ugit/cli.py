@@ -7,11 +7,13 @@ import subprocess
 from . import data
 from . import base
 from . import diff
+from . import remote
 
 def main():
-    args = parse_args()
-    # 调用绑定的 func
-    args.func(args)
+    with data.change_git_dir('.'):
+         args = parse_args()
+         # 调用绑定的 func
+         args.func(args)
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -106,6 +108,10 @@ def parse_args():
     merge_base_parser.add_argument('commit1', type=oid)
     merge_base_parser.add_argument('commit2', type=oid)
 
+    fetch_parser = commands.add_parser('fetch')
+    fetch_parser.set_defaults(func=fetch)
+    fetch_parser.add_argument('remote')
+    
     return parser.parse_args()
 
 def init(args):
@@ -280,3 +286,7 @@ def merge(args):
 # megre-base:
 def merge_base(args):
     print(base.get_merge_base(args.commit1, args.commit2))
+
+
+def fetch(args):
+    remote.fetch(args.remote)

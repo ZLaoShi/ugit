@@ -173,6 +173,10 @@ def  get_merge_base(oid1, oid2):
             return oid
 
 
+def is_ancestor_of(commit, maybe_ancestor):
+    return maybe_ancestor in iter_commits_and_parents({commit})
+
+
 def create_tag(name, oid):
     data.update_ref(f'refs/tags/{name}', data.RefValue(symbolic=False, value=oid))
 
@@ -278,6 +282,14 @@ def get_oid(name):
     assert False, f'Unknown name {name}'
 
 
+def add(filename):
+    with data.get_index() as index:
+        for filename in filename:
+            # Normalize path
+            filename = os.path.relpath(filename)
+            with open (filename, 'rb') as f:
+                oid = data.hash_object(f.read())
+            index[filename] = oid
 
 # 通用的忽略函数
 # 增强检查：同时检查 .git 和 .ugit

@@ -26,9 +26,13 @@ def fetch(remote_path):
 def push(remote_path, refname):
     # Get refs data
     remote_refs = _get_remote_refs(remote_path)
+    remote_ref = remote_refs.get(refname)
     local_ref = data.get_ref(refname).value
     assert local_ref
 
+    # Don't allow force push
+    assert not remote_ref or base.is_ancestor_of(local_ref, remote_ref)
+    
     # Compute which objects the server doesn't have
     known_remote_refs = filter(data.object_exists, remote_refs.values())
     remote_objects = set(base.iter_objects_in_commits(known_remote_refs))

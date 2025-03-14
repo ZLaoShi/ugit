@@ -237,7 +237,26 @@ def iter_commits_and_parents(oids):
         oids.appendleft(commit.parent)
 
 
+def iter_objects_in_commits(oids):
+    visited = set()
+    def iter_object_in_tree(oid):
+        visited.add(oid)
+        yield oid
+        for type_, oid, _ in _iter_tree_enrties(oid):
+            if oid not in visited:
+                if type_ == 'tree':
+                    yield from iter_objects_in_tree(oid)
+                else:
+                    visited.add(oid)
+                    yield oid
 
+    for oid in iter_commits_and_parents(oids):
+        yield oid
+        commit = get_commit(oid)
+        if commit.tree not in visited:
+            yield from iter_objects_in_tree(commit.tree)
+
+        
 def get_oid(name):
     if name == '@':name = 'HEAD' 
     # 使用名字

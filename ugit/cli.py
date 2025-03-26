@@ -7,11 +7,13 @@ import subprocess
 from . import data
 from . import base
 from . import diff
+from . import remote
 
 def main():
-    args = parse_args()
-    # 调用绑定的 func
-    args.func(args)
+    with data.change_git_dir('.'):
+         args = parse_args()
+         # 调用绑定的 func
+         args.func(args)
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -63,7 +65,8 @@ def parse_args():
     # diff 子命令
     diff_parser = commands.add_parser('diff')
     diff_parser.set_defaults(func=_diff)
-    diff_parser.add_argument('commit', default='@', type=oid, nargs='?')
+    diff_parser.add_argument('--cached', action='store_true')
+    diff_parser.add_argument('commit', default='@', nargs='?')
 
     #checkout 子命令
     checkout_parser = commands.add_parser('checkout')
@@ -105,6 +108,19 @@ def parse_args():
     merge_base_parser.set_defaults(func=merge_base)
     merge_base_parser.add_argument('commit1', type=oid)
     merge_base_parser.add_argument('commit2', type=oid)
+
+    fetch_parser = commands.add_parser('fetch')
+    fetch_parser.set_defaults(func=fetch)
+    fetch_parser.add_argument('remote')
+    
+    push_parser = commands.add_parser('push')
+    push_parser.set_defaults(func=push)
+    push_parser.add_argument('remote')
+    push_parser.add_argument('branch')
+
+    add_parser = commands.add_parser('add')
+    add_parser.set_defaults(func=add)
+    add_parser.add_argument('files', nargs='+')
 
     return parser.parse_args()
 
@@ -177,9 +193,26 @@ def show(args):
 
 # diff: 显示提交之间的差异
 def _diff(args):
-    tree = args.commit and base.get_commit(args.commit).tree
+    oid = args.commit and base.get_oid(args.commit)
 
-    result = diff.diff_trees(base.get_tree(tree), base.get_working_tree())
+    if args.commit:
+        # If a commit was provided explicitly, diff from it
+        tree_from = base.get_tree(oid and base.get_commit(oid).tree)
+
+    if args.cached:
+        tree_to = base.get_index_tree()
+        if not args.commit:
+            # If no commit was provided, diff from HEAD
+            oid = base.get_oid('@')
+            tree_from = base.get_tree(oid and base.get_commit(oid).tree)
+    else:
+        tree_to = base.get_working_tree()
+        if not args.commit:
+            # If no commit was provided, diff from index
+            tree_from = base.get_index_tree()
+                
+
+    result = diff.diff_trees(tree_from, tree_to)
     sys.stdout.flush()
     sys.stdout.buffer.write(result)
 
@@ -265,7 +298,13 @@ def status(args):
     print('\nChanges to be committed:')
     HEAD_tree = HEAD and base.get_commit(HEAD).tree
     for path, action in diff.iter_changed_files(base.get_tree(HEAD_tree),
+                                                base.get_index_tree()):
+        print(f'{action:>12}: {path}')
+
+    print('\nChanges not staged for commit:\n')
+    for path, action in diff.iter_changed_files(base.get_index_tree(),
                                                 base.get_working_tree()):
+
         print (f'{action:>12}: {path}')
 
 
@@ -280,3 +319,13 @@ def merge(args):
 # megre-base:
 def merge_base(args):
     print(base.get_merge_base(args.commit1, args.commit2))
+
+
+def fetch(args):
+    remote.fetch(args.remote)
+
+def push(args):
+    remote.push(args.remote, f'refs/heads/{args.branch}')
+
+def add(args):
+    base.add(args.files)

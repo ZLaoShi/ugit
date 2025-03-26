@@ -1,10 +1,22 @@
 import os
 import hashlib
+import shutil
+import json
 
 from collections import namedtuple
+from contextlib import contextmanager
+
+# Will be initiallized in cli.main()
+GIT_DIR = None
 
 
-GIT_DIR = '.ugit'
+@contextmanager
+def change_git_dir(new_dir):
+    global GIT_DIR
+    old_dir = GIT_DIR
+    GIT_DIR = f'{new_dir}/.ugit'
+    yield
+    GIT_DIR = old_dir
 
 def init():
     os.makedirs(GIT_DIR)
@@ -63,6 +75,19 @@ def iter_refs(prefix='', deref=True):
             yield refname, ref
 
 
+@contextmanager
+def get_index():
+    index = {}
+    if os.path.isfile(f'{GIT_DIR}/index'):
+        with open (f'{GIT_DIR}/index') as f:
+            index = json.load(f)
+    
+    yield index
+
+    with open(f'{GIT_DIR}/index', 'w') as f:
+        json.dump(index, f)
+
+
 def hash_object(data, type_='blob'):
     obj = type_.encode() + b'\x00' + data
     oid = hashlib.sha1(obj).hexdigest()
@@ -83,3 +108,18 @@ def get_object(oid, expected='blob'):
     if expected is not None:
         assert type_ == expected, f'Expected {expected}, got {type_}'
     return content
+
+def object_exists(oid):
+    return os.path.isfile(f'{GIT_DIR}/pbject/{oid}')
+
+def fetch_object_if_missing(oid, remote_get_dir):
+    if object_exists(oids):
+        return
+    remote_get_dir += '/.ugit'
+    shutil.copy(f'{remote_git_dir}/object/{oid}',
+                f'{GIT_DIR}/object/{oid}')
+
+def push_object(oid, remote_git_dir):
+    remote_git_dir += '/.ugit'
+    shutil.copy(f'{GIT_DIR}/objects/{oid}',
+                f'{remote_git_dir}/objects/{oid}')
